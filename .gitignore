@@ -12,3 +12,4 @@ agent-sight-*.tgz
 docs/.next
 docs/node_modules
 docs/out
+release-assets-0.1.2

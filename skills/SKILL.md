@@ -12,6 +12,9 @@ allowed-tools: Bash(agent-sight:*), Bash(just cli *)
 - `claude` for Claude Code `~/.claude/history.jsonl`
 
 Agents already know the harness they are running in, so they should choose the source directly in their command calls when needed.
+Default to the current harness only.
+Do not query other sources or compare across harnesses unless the user explicitly asks for that.
+If the user says "recently", "history", or similar without naming a source, interpret that as the current harness only.
 
 Examples:
 
@@ -112,11 +115,12 @@ If `--source` is omitted, the default is `opencode`.
 ## Recommended Agent Workflow
 
 1. Start with `query` when you need broad recent context.
-2. Use `--source` explicitly when the harness context already tells you which provider matters.
-3. Use `--directory` to narrow to one project when the user is asking about a specific repo.
-4. Use `filter` when you already know a likely phrase or topic.
-5. Use `session` only for OpenCode when you already have a session ID.
-6. Add `--full` only when you need metadata, not for quick scans.
+2. Unless the user explicitly asks otherwise, query only the current harness's source.
+3. Use `--source` explicitly when the harness context already tells you which provider matters.
+4. Use `--directory` to narrow to one project when the user is asking about a specific repo.
+5. Use `filter` when you already know a likely phrase or topic.
+6. Use `session` only for OpenCode when you already have a session ID.
+7. Add `--full` only when you need metadata, not for quick scans.
 
 ## Common Pitfalls
 
