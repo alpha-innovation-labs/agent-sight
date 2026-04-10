@@ -118,7 +118,7 @@ jobs:
             binary: agent-sight-win32-arm64.exe
             use_zigbuild: true
           - name: macOS x64
-            os: macos-13
+            os: macos-15-intel
             target: x86_64-apple-darwin
             binary: agent-sight-darwin-x64
             use_zigbuild: false
