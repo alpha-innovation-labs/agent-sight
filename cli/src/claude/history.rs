@@ -1,14 +1,14 @@
+use crate::AppResult;
 use crate::logger::Logger;
 use crate::model::{OutputConversation, OutputMessage};
-use crate::AppResult;
 use serde::Deserialize;
 use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
+use time::OffsetDateTime;
 use time::format_description::FormatItem;
 use time::macros::format_description;
-use time::OffsetDateTime;
 
 const DEFAULT_GAP_MS: i64 = 30 * 60 * 1000;
 static DATETIME_FORMAT: &[FormatItem<'static>] =

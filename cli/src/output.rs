@@ -1,9 +1,9 @@
 use crate::model::{MessageRow, OutputConversation, OutputMessage, PartRow};
 use serde_json::{Map, Value};
 use std::collections::HashMap;
+use time::OffsetDateTime;
 use time::format_description::FormatItem;
 use time::macros::format_description;
-use time::OffsetDateTime;
 
 static DATETIME_FORMAT: &[FormatItem<'static>] =
     format_description!("[year]-[month]-[day] [hour]:[minute]:[second]");

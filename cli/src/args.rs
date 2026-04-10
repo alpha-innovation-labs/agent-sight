@@ -37,31 +37,41 @@ pub struct Args {
     pub full: bool,
 }
 
+pub fn is_version_request(argv: &[String]) -> bool {
+    argv.iter().any(|arg| arg == "--version" || arg == "-V")
+}
+
 pub fn print_help() {
     eprintln!("Promsight queries local OpenCode or Claude user history.\n");
+    eprintln!("Version:");
+    eprintln!("  agent-sight --version\n");
     eprintln!("Usage:");
     eprintln!(
-        "  cargo run -- query --since <duration> [--source <provider>] [--directory <path>] [--full] [--verbose]"
+        "  agent-sight query --since <duration> [--source <source>] [--directory <path>] [--full] [--verbose]"
     );
-    eprintln!("  cargo run -- session --id <session-id> [--source opencode] [--full] [--verbose]");
+    eprintln!("  agent-sight session --id <session-id> [--source opencode] [--full] [--verbose]");
     eprintln!(
-        "  cargo run -- filter <text> --since <duration> [--source <provider>] [--directory <path>] [--full] [--verbose]\n"
+        "  agent-sight filter <text> --since <duration> [--source <source>] [--directory <path>] [--full] [--verbose]\n"
     );
-    eprintln!("Providers:");
-    eprintln!("  opencode    Query the OpenCode SQLite database");
-    eprintln!("  claude      Query ~/.claude/history.jsonl\n");
-    eprintln!("Options:");
-    eprintln!("  --source     Provider to query, default: opencode");
+    eprintln!("Commands:");
+    eprintln!("  query      Query recent user messages");
+    eprintln!("  session    Show messages from one OpenCode session");
+    eprintln!("  filter     Query recent messages matching text\n");
+    eprintln!("Sources:");
+    eprintln!("  opencode   Query the OpenCode SQLite database (default)");
+    eprintln!("  claude     Query ~/.claude/history.jsonl\n");
+    eprintln!("Common options:");
+    eprintln!("  --source     Source to query");
     eprintln!("  --full       Return expanded conversation objects");
     eprintln!("  --verbose    Print step-by-step progress and timing");
     eprintln!("  --since      Time window like 24h or 7d");
     eprintln!("  --directory  Restrict to one directory/project");
     eprintln!("  --id         Session id for the `session` command\n");
     eprintln!("Examples:");
-    eprintln!("  cargo run -- query --since 24h");
-    eprintln!("  cargo run -- query --since 24h --source claude");
-    eprintln!("  cargo run -- session --id ses_123");
-    eprintln!("  cargo run -- filter \"rust sqlite\" --since 7d --source claude");
+    eprintln!("  agent-sight query --since 24h");
+    eprintln!("  agent-sight query --since 24h --source claude");
+    eprintln!("  agent-sight session --id ses_123");
+    eprintln!("  agent-sight filter \"rust sqlite\" --since 7d --source claude");
 }
 
 pub fn parse_args(argv: &[String]) -> Result<Option<Args>, String> {

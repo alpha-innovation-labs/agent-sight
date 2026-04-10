@@ -5,9 +5,11 @@ mod model;
 mod opencode;
 mod output;
 
-use crate::args::{parse_args, parse_since_to_hours, print_help, Command as CliCommand, Source};
+use crate::args::{
+    Command as CliCommand, Source, is_version_request, parse_args, parse_since_to_hours, print_help,
+};
 use crate::claude::history::query_history as query_claude_history;
-use crate::logger::{format_duration, Logger};
+use crate::logger::{Logger, format_duration};
 use crate::model::{FullOutput, OutputConversation};
 use crate::opencode::db::{query_history as query_opencode_history, query_session};
 use crate::output::{filter_conversations_by_text, to_default_output};
@@ -203,6 +205,13 @@ fn compact_output(command_name: &str, conversations: &[OutputConversation]) -> s
 }
 
 fn main() {
+    let argv: Vec<String> = env::args().skip(1).collect();
+
+    if is_version_request(&argv) {
+        println!("{}", env!("CARGO_PKG_VERSION"));
+        return;
+    }
+
     if let Err(error) = run() {
         eprintln!("{error}");
         process::exit(1);

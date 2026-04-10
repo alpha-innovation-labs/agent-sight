@@ -1,8 +1,8 @@
-use crate::logger::{format_duration, Logger};
+use crate::AppResult;
+use crate::logger::{Logger, format_duration};
 use crate::model::{MessageRow, OutputConversation, PartRow};
 use crate::output::group_rows;
-use crate::AppResult;
-use rusqlite::{params, Connection, OpenFlags, Row, ToSql};
+use rusqlite::{Connection, OpenFlags, Row, ToSql, params};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::env;
