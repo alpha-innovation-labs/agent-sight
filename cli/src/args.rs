@@ -15,6 +15,7 @@ impl Source {
 
 #[derive(Debug)]
 pub enum Command {
+    Projects,
     Query {
         since: String,
         directory: Option<String>,
@@ -49,11 +50,13 @@ pub fn print_help() {
     eprintln!(
         "  agent-sight query --since <duration> [--source <source>] [--directory <path>] [--full] [--verbose]"
     );
+    eprintln!("  agent-sight projects [--source <source>] [--verbose]");
     eprintln!("  agent-sight session --id <session-id> [--source opencode] [--full] [--verbose]");
     eprintln!(
         "  agent-sight filter <text> --since <duration> [--source <source>] [--directory <path>] [--full] [--verbose]\n"
     );
     eprintln!("Commands:");
+    eprintln!("  projects   List available project directories");
     eprintln!("  query      Query recent user messages");
     eprintln!("  session    Show messages from one OpenCode session");
     eprintln!("  filter     Query recent messages matching text\n");
@@ -68,6 +71,7 @@ pub fn print_help() {
     eprintln!("  --directory  Restrict to one directory/project");
     eprintln!("  --id         Session id for the `session` command\n");
     eprintln!("Examples:");
+    eprintln!("  agent-sight projects");
     eprintln!("  agent-sight query --since 24h");
     eprintln!("  agent-sight query --since 24h --source claude");
     eprintln!("  agent-sight session --id ses_123");
@@ -84,12 +88,43 @@ pub fn parse_args(argv: &[String]) -> Result<Option<Args>, String> {
     };
 
     match command.as_str() {
+        "projects" => parse_projects_args(rest),
         "query" => parse_query_args(rest),
         "session" => parse_session_args(rest),
         "filter" => parse_filter_args(rest),
         _ => Err(format!("Unknown command: {command}")),
     }
     .map(Some)
+}
+
+fn parse_projects_args(argv: &[String]) -> Result<Args, String> {
+    let mut source = Source::OpenCode;
+    let mut verbose = false;
+    let mut index = 0;
+
+    while index < argv.len() {
+        match argv[index].as_str() {
+            "--source" => {
+                let Some(value) = argv.get(index + 1) else {
+                    return Err("Missing value for --source".to_string());
+                };
+                source = parse_source(value)?;
+                index += 2;
+            }
+            "--verbose" => {
+                verbose = true;
+                index += 1;
+            }
+            token => return Err(format!("Unknown argument: {token}")),
+        }
+    }
+
+    Ok(Args {
+        source,
+        command: Command::Projects,
+        verbose,
+        full: false,
+    })
 }
 
 fn parse_query_args(argv: &[String]) -> Result<Args, String> {

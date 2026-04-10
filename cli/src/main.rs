@@ -6,12 +6,17 @@ mod opencode;
 mod output;
 
 use crate::args::{
-    Command as CliCommand, Source, is_version_request, parse_args, parse_since_to_hours, print_help,
+    is_version_request, parse_args, parse_since_to_hours, print_help, Command as CliCommand, Source,
 };
-use crate::claude::history::query_history as query_claude_history;
-use crate::logger::{Logger, format_duration};
+use crate::claude::history::{
+    query_history as query_claude_history, query_projects as query_claude_projects,
+};
+use crate::logger::{format_duration, Logger};
 use crate::model::{FullOutput, OutputConversation};
-use crate::opencode::db::{query_history as query_opencode_history, query_session};
+use crate::opencode::db::{
+    query_history as query_opencode_history, query_projects as query_opencode_projects,
+    query_session,
+};
 use crate::output::{filter_conversations_by_text, to_default_output};
 use std::env;
 use std::error::Error;
@@ -31,7 +36,18 @@ fn run() -> AppResult<()> {
     let logger = Logger::new(args.verbose);
     let total_started_at = SystemTime::now();
 
+    if let CliCommand::Projects = args.command {
+        let projects = run_projects_command(args.source, &logger)?;
+        logger.log(&format!(
+            "[promsight] Total command time: {}",
+            format_duration(total_started_at.elapsed()?)
+        ));
+        println!("{}", serde_json::to_string_pretty(&projects)?);
+        return Ok(());
+    }
+
     let (source, command_name, since, directory, conversations) = match args.command {
+        CliCommand::Projects => unreachable!("handled above"),
         CliCommand::Query { since, directory } => {
             run_query_command(args.source, since, directory, &logger)?
         }
@@ -77,6 +93,16 @@ fn run() -> AppResult<()> {
 
     print_output(args.full, command_name, full_output)?;
     Ok(())
+}
+
+fn run_projects_command(source: Source, logger: &Logger) -> AppResult<Vec<String>> {
+    logger.log("[promsight] Starting projects command");
+    logger.log(&format!("[promsight] Source: {}", source.as_str()));
+
+    match source {
+        Source::OpenCode => query_opencode_projects(logger),
+        Source::Claude => query_claude_projects(logger),
+    }
 }
 
 fn run_query_command(

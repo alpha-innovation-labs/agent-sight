@@ -1,8 +1,8 @@
-use crate::AppResult;
-use crate::logger::{Logger, format_duration};
+use crate::logger::{format_duration, Logger};
 use crate::model::{MessageRow, OutputConversation, PartRow};
 use crate::output::group_rows;
-use rusqlite::{Connection, OpenFlags, Row, ToSql, params};
+use crate::AppResult;
+use rusqlite::{params, Connection, OpenFlags, Row, ToSql};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::env;
@@ -56,6 +56,15 @@ join session s on s.id = m.session_id
 where s.id = ?1
 "#;
 
+const QUERY_PROJECTS: &str = r#"
+select
+  s.directory as directory
+from session s
+where trim(s.directory) <> ''
+group by s.directory
+order by max(s.time_updated) desc, s.directory asc
+"#;
+
 pub fn query_history(
     cutoff_ms: i64,
     directory: Option<&str>,
@@ -70,6 +79,11 @@ pub fn query_session(session_id: &str, logger: &Logger) -> AppResult<Vec<OutputC
     let database_path = resolve_database_path()?;
     let (messages, parts_by_message) = run_session_query(&database_path, session_id, logger)?;
     Ok(group_rows(messages, parts_by_message))
+}
+
+pub fn query_projects(logger: &Logger) -> AppResult<Vec<String>> {
+    let database_path = resolve_database_path()?;
+    run_projects_query(&database_path, logger)
 }
 
 fn resolve_database_path() -> AppResult<String> {
@@ -202,6 +216,32 @@ fn run_session_query(
     ));
 
     Ok((messages, parts_by_message))
+}
+
+fn run_projects_query(database_path: &str, logger: &Logger) -> AppResult<Vec<String>> {
+    logger.log("[promsight] Running SQLite projects query against OpenCode DB");
+    logger.log(&format!("[promsight] Database path: {database_path}"));
+
+    let started_at = SystemTime::now();
+    let connection = Connection::open_with_flags(
+        database_path,
+        OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )?;
+
+    let mut statement = connection.prepare(QUERY_PROJECTS)?;
+    let rows = statement.query_map([], |row| row.get::<_, String>(0))?;
+    let projects = rows.collect::<Result<Vec<_>, _>>()?;
+
+    logger.log(&format!(
+        "[promsight] Retrieved {} project(s)",
+        projects.len()
+    ));
+    logger.log(&format!(
+        "[promsight] Query completed in {}",
+        format_duration(started_at.elapsed()?)
+    ));
+
+    Ok(projects)
 }
 
 fn query_message_rows<P>(

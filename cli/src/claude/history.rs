@@ -1,14 +1,15 @@
-use crate::AppResult;
 use crate::logger::Logger;
 use crate::model::{OutputConversation, OutputMessage};
+use crate::AppResult;
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
-use time::OffsetDateTime;
 use time::format_description::FormatItem;
 use time::macros::format_description;
+use time::OffsetDateTime;
 
 const DEFAULT_GAP_MS: i64 = 30 * 60 * 1000;
 static DATETIME_FORMAT: &[FormatItem<'static>] =
@@ -78,6 +79,48 @@ pub fn query_history(
     ));
 
     Ok(group_rows(rows))
+}
+
+pub fn query_projects(logger: &Logger) -> AppResult<Vec<String>> {
+    let history_path = resolve_history_path()?;
+    logger.log(&format!(
+        "[promsight] Reading Claude history from {}",
+        history_path.display()
+    ));
+
+    let file = File::open(&history_path)?;
+    let reader = BufReader::new(file);
+    let mut projects_by_latest_timestamp = HashMap::<String, i64>::new();
+
+    for line in reader.lines() {
+        let line = line?;
+        if line.trim().is_empty() {
+            continue;
+        }
+
+        let Ok(entry) = serde_json::from_str::<HistoryEntry>(&line) else {
+            continue;
+        };
+
+        if entry.project.trim().is_empty() {
+            continue;
+        }
+
+        projects_by_latest_timestamp
+            .entry(entry.project)
+            .and_modify(|timestamp| *timestamp = (*timestamp).max(entry.timestamp))
+            .or_insert(entry.timestamp);
+    }
+
+    let mut projects = projects_by_latest_timestamp.into_iter().collect::<Vec<_>>();
+    projects.sort_by(|left, right| right.1.cmp(&left.1).then_with(|| left.0.cmp(&right.0)));
+
+    logger.log(&format!(
+        "[promsight] Retrieved {} project(s)",
+        projects.len()
+    ));
+
+    Ok(projects.into_iter().map(|(project, _)| project).collect())
 }
 
 fn resolve_history_path() -> AppResult<PathBuf> {
