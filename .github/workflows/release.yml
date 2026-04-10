@@ -2,58 +2,86 @@ name: Release
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - "v*"
   workflow_dispatch:
-
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+    inputs:
+      tag:
+        description: "Tag name to publish, for example v0.1.3"
+        required: true
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}-${{ inputs.tag || 'dispatch' }}
+  cancel-in-progress: false
 
 jobs:
-  check-release:
-    name: Check for new version
+  validate-release:
+    name: Validate tag and package versions
     runs-on: ubuntu-latest
     outputs:
-      should_release: ${{ steps.check.outputs.should_release }}
-      needs_github_release: ${{ steps.check.outputs.needs_github_release }}
-      version: ${{ steps.check.outputs.version }}
-      package_name: ${{ steps.check.outputs.package_name }}
+      tag: ${{ steps.meta.outputs.tag }}
+      version: ${{ steps.meta.outputs.version }}
+      npm_exists: ${{ steps.meta.outputs.npm_exists }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Compare package.json version to npm and check GitHub release
-        id: check
+      - name: Resolve tag name
+        id: meta
+        shell: bash
         run: |
-          PACKAGE_NAME=$(node -p "require('./package.json').name")
-          LOCAL_VERSION=$(node -p "require('./package.json').version")
-          NPM_VERSION=$(npm view "$PACKAGE_NAME" version 2>/dev/null || echo "0.0.0")
+          set -euo pipefail
 
-          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
-          echo "version=$LOCAL_VERSION" >> "$GITHUB_OUTPUT"
-
-          if [ "$LOCAL_VERSION" != "$NPM_VERSION" ]; then
-            echo "should_release=true" >> "$GITHUB_OUTPUT"
-            echo "needs_github_release=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          echo "should_release=false" >> "$GITHUB_OUTPUT"
-
-          if gh release view "v$LOCAL_VERSION" >/dev/null 2>&1; then
-            echo "needs_github_release=false" >> "$GITHUB_OUTPUT"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG="${{ inputs.tag }}"
           else
-            echo "needs_github_release=true" >> "$GITHUB_OUTPUT"
+            TAG="${GITHUB_REF_NAME}"
           fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+          VERSION="${TAG#v}"
+          PACKAGE_NAME="agent-sight"
+          NPM_VERSION=$(npm view "$PACKAGE_NAME" version 2>/dev/null || echo "")
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          if [[ "$NPM_VERSION" == "$VERSION" ]]; then
+            echo "npm_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "npm_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.meta.outputs.tag }}
+
+      - name: Validate versions match tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TAG_VERSION="${{ steps.meta.outputs.version }}"
+          CARGO_VERSION=$(grep '^version = ' cli/Cargo.toml | head -1 | sed -E 's/version = "([^"]+)"/\1/')
+          NPM_VERSION=$(node -p "require('./package.json').version")
+
+          echo "Tag:   ${TAG_VERSION}"
+          echo "Cargo: ${CARGO_VERSION}"
+          echo "npm:   ${NPM_VERSION}"
+
+          [[ "$CARGO_VERSION" == "$TAG_VERSION" ]] || {
+            echo "Cargo version does not match tag" >&2
+            exit 1
+          }
+
+          [[ "$NPM_VERSION" == "$TAG_VERSION" ]] || {
+            echo "npm version does not match tag" >&2
+            exit 1
+          }
 
   build-binaries:
     name: Build ${{ matrix.name }}
-    needs: check-release
-    if: needs.check-release.outputs.should_release == 'true' || needs.check-release.outputs.needs_github_release == 'true'
+    needs: validate-release
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -101,16 +129,15 @@ jobs:
             use_zigbuild: false
 
     steps:
-      - name: Checkout repository
+      - name: Checkout tag
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate-release.outputs.tag }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-
-      - name: Sync version
-        run: npm run version:sync
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -151,10 +178,11 @@ jobs:
         run: cargo zigbuild --release --manifest-path cli/Cargo.toml --target ${{ matrix.target }}
 
       - name: Build with cargo
-        if: '!matrix.use_zigbuild'
+        if: matrix.use_zigbuild == false
         run: cargo build --release --manifest-path cli/Cargo.toml --target ${{ matrix.target }}
 
       - name: Copy binary
+        shell: bash
         run: |
           mkdir -p artifacts
           if [[ "${{ matrix.target }}" == *"windows"* ]]; then
@@ -169,16 +197,66 @@ jobs:
         with:
           name: ${{ matrix.binary }}
           path: artifacts/${{ matrix.binary }}
-          retention-days: 7
 
-  publish:
-    name: Publish to npm
-    needs: [check-release, build-binaries]
-    if: needs.check-release.outputs.should_release == 'true'
+  create-release:
+    name: Create GitHub release with binaries
+    needs:
+      - validate-release
+      - build-binaries
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - name: Checkout repository
+      - name: Checkout tag
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate-release.outputs.tag }}
+
+      - name: Download binary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Create release and upload assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          FILES=(
+            "dist/agent-sight-darwin-arm64/agent-sight-darwin-arm64"
+            "dist/agent-sight-darwin-x64/agent-sight-darwin-x64"
+            "dist/agent-sight-linux-arm64/agent-sight-linux-arm64"
+            "dist/agent-sight-linux-x64/agent-sight-linux-x64"
+            "dist/agent-sight-linux-musl-arm64/agent-sight-linux-musl-arm64"
+            "dist/agent-sight-linux-musl-x64/agent-sight-linux-musl-x64"
+            "dist/agent-sight-win32-arm64.exe/agent-sight-win32-arm64.exe"
+            "dist/agent-sight-win32-x64.exe/agent-sight-win32-x64.exe"
+          )
+
+          if gh release view "${{ needs.validate-release.outputs.tag }}" >/dev/null 2>&1; then
+            gh release upload "${{ needs.validate-release.outputs.tag }}" "${FILES[@]}" --clobber
+          else
+            gh release create "${{ needs.validate-release.outputs.tag }}" "${FILES[@]}" --generate-notes
+          fi
+
+  publish-npm:
+    name: Publish npm package
+    needs:
+      - validate-release
+      - build-binaries
+      - create-release
+    if: needs.validate-release.outputs.npm_exists != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate-release.outputs.tag }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -189,9 +267,10 @@ jobs:
       - name: Download all binary artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts/
+          path: artifacts
 
       - name: Move binaries to bin directory
+        shell: bash
         run: |
           mkdir -p bin
           find artifacts -type f -name 'agent-sight-*' -exec mv {} bin/ \;
@@ -200,6 +279,7 @@ jobs:
           ls -la bin/
 
       - name: Verify all binaries exist
+        shell: bash
         run: |
           EXPECTED_BINARIES=(
             "agent-sight-linux-x64"
@@ -219,42 +299,6 @@ jobs:
           done
 
       - name: Publish to npm
-        run: npm publish
+        run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  github-release:
-    name: Create GitHub release
-    needs: [check-release, build-binaries, publish]
-    if: always() && needs.build-binaries.result == 'success' && needs.check-release.outputs.needs_github_release == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts/
-
-      - name: Move binaries to bin directory
-        run: |
-          mkdir -p bin
-          find artifacts -type f -name 'agent-sight-*' -exec mv {} bin/ \;
-          rm -rf artifacts
-          chmod +x bin/agent-sight-* 2>/dev/null || true
-          ls -la bin/
-
-      - name: Create or update release
-        run: |
-          TAG="v${{ needs.check-release.outputs.version }}"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" bin/agent-sight-* --clobber
-          else
-            gh release create "$TAG" \
-              --title "$TAG" \
-              --generate-notes \
-              bin/agent-sight-*
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

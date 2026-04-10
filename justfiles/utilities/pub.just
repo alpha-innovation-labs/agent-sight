@@ -1,4 +1,4 @@
-# Bump, tag, and push a release for CI publishing.
+# Bump, tag, and push a release for GitHub Actions publishing.
 # Usage: just pub
 # Example: just pub
 
