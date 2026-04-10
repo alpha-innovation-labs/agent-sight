@@ -40,13 +40,13 @@ function getBinaryName() {
 
   let archKey;
   switch (arch()) {
-    case 'x64':
-    case 'x86_64':
-      archKey = 'x64';
-      break;
     case 'arm64':
     case 'aarch64':
       archKey = 'arm64';
+      break;
+    case 'x64':
+    case 'x86_64':
+      archKey = 'x64';
       break;
     default:
       return null;

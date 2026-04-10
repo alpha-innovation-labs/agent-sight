@@ -1,6 +1,6 @@
 {
   "name": "agent-sight",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Query local OpenCode and Claude user history from a native Rust CLI distributed through npm.",
   "type": "module",
   "files": [

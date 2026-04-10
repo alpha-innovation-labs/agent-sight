@@ -6,6 +6,7 @@ bin/agent-sight-linux-arm64
 bin/agent-sight-linux-x64
 bin/agent-sight-linux-musl-arm64
 bin/agent-sight-linux-musl-x64
+bin/agent-sight-win32-arm64.exe
 bin/agent-sight-win32-x64.exe
 agent-sight-*.tgz
 docs/.next

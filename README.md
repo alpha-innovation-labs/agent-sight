@@ -17,6 +17,9 @@ agent-sight query --since 24h --source claude
 agent-sight session --id ses_123
 ```
 
+Native binaries are published for macOS x64/arm64, Linux x64/arm64,
+Linux musl x64/arm64, Windows x64, and Windows arm64.
+
 ## Development
 
 ```bash
