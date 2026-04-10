@@ -1,0 +1,35 @@
+---
+title: Agent Sight Docs
+description: Understand what Agent Sight does, how to run it, and how its commands are organized.
+---
+
+Agent Sight is a Rust CLI for extracting local coding-agent history into structured JSON.
+
+It currently reads from two local sources:
+
+- the OpenCode SQLite database,
+- the Claude `~/.claude/history.jsonl` file.
+
+## Why It Exists
+
+- Local agent history is useful, but the raw storage formats are awkward to query directly.
+- Agent Sight gives you one CLI interface for filtering sessions, grouping messages, and producing clean JSON output.
+- It is designed for scripting, analysis, and tooling that needs repeatable local conversation access.
+
+## Main Workflows
+
+1. Query recent conversations with `query`.
+2. Inspect one OpenCode session with `session`.
+3. Filter recent conversations by search text with `filter`.
+
+## Start Here
+
+If you are new to Agent Sight, read these pages in order:
+
+1. [Overview](/docs/overview)
+2. [Installation](/docs/getting-started/installation)
+3. [Commands](/docs/getting-started/commands)
+
+## Reference
+
+Use the [Reference](/docs/reference) section when you need command behavior, source rules, or output shape details.

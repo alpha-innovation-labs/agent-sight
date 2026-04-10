@@ -1,0 +1,51 @@
+---
+title: Commands
+description: The supported CLI commands and how to use them.
+---
+
+Agent Sight exposes three top-level commands.
+
+## `query`
+
+Query recent conversations for a time window.
+
+```bash
+just cli query --since 24h
+```
+
+Common options:
+
+- `--source opencode|claude`
+- `--since <duration>`
+- `--directory <path>`
+- `--full`
+- `--verbose`
+
+## `session`
+
+Return one OpenCode session by id.
+
+```bash
+just cli session --id ses_123
+```
+
+Notes:
+
+- `session` only supports `--source opencode`
+- compact mode returns just the message content array when there is one conversation
+
+## `filter`
+
+Filter recent conversations by text.
+
+```bash
+just cli filter "sqlite" --since 7d --source claude
+```
+
+The filter text must come immediately after the `filter` command name.
+
+## Help Output
+
+```bash
+just cli --help
+```

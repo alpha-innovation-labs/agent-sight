@@ -3,4 +3,4 @@
 # Example: just cli --help
 
 cli *ARGS:
-	cargo run --manifest-path ../../src/Cargo.toml --bin cli-rs -- {{ARGS}}
+	cargo run --manifest-path {{invocation_directory()}}/cli/Cargo.toml --bin agent-sight -- {{ARGS}}

@@ -1,0 +1,42 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/black.css';
+@import 'fumadocs-ui/css/preset.css';
+
+:root {
+  --color-fd-primary: oklch(0.61 0.15 245);
+  --color-fd-primary-foreground: oklch(0.98 0 0);
+  --color-fd-accent: oklch(0.95 0.03 245);
+  --color-fd-accent-foreground: oklch(0.2 0 0);
+  --color-fd-card: oklch(0.99 0 0);
+  --color-fd-border: oklch(0.88 0 0);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+}
+
+.dark {
+  --color-fd-primary: oklch(0.72 0.13 245);
+  --color-fd-primary-foreground: oklch(0.1 0 0);
+  --color-fd-accent: oklch(0.28 0.04 245);
+  --color-fd-accent-foreground: oklch(0.98 0 0);
+  --color-fd-card: oklch(0.18 0 0);
+  --color-fd-border: oklch(0.34 0 0);
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+}
+
+@theme inline {
+  --font-sans: var(--font-geist);
+  --font-mono: var(--font-geist-mono);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+}
+
+#nd-docs-layout .prose :where(h1, h2, h3, h4):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+  font-weight: 500;
+}

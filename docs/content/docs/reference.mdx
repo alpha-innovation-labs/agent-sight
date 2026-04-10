@@ -1,0 +1,61 @@
+---
+title: Reference
+description: Source behavior, output model, and command semantics.
+---
+
+## Command Model
+
+The CLI supports these command families:
+
+- `query { since, directory }`
+- `session { session_id }`
+- `filter { since, directory, filter }`
+
+Each command also supports shared top-level flags:
+
+- `--source`
+- `--full`
+- `--verbose`
+
+## Output Model
+
+Every successful command produces JSON.
+
+In full mode, the output includes:
+
+- `source`
+- `since`
+- `directory`
+- `conversation_count`
+- `message_count`
+- `conversations`
+
+In compact mode:
+
+- most commands return the default reduced conversation output,
+- `session` returns a simple string array when exactly one conversation is returned.
+
+## OpenCode Behavior
+
+OpenCode queries:
+
+- read the SQLite database in read-only mode,
+- collect messages by session,
+- keep only user-role messages,
+- fetch text parts for those messages,
+- group and sort results by session update time.
+
+## Claude Behavior
+
+Claude queries:
+
+- read `~/.claude/history.jsonl`,
+- ignore invalid or empty lines,
+- filter by cutoff time, directory, and optional search text,
+- group rows into conversations using project name and a 30-minute gap threshold.
+
+## Time Windows
+
+Time windows use compact strings such as `24h` and `7d`.
+
+The CLI converts them into hour counts and subtracts them from the current Unix timestamp in milliseconds.

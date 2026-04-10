@@ -3,4 +3,4 @@
 # Example: just dev .opencode/user-messages.json --pretty
 
 dev OUTPUT=".opencode/user-messages.json" *ARGS:
-	node ../../.opencode/export-user-messages.mjs --output {{OUTPUT}} {{ARGS}}
+	node {{invocation_directory()}}/.opencode/export-user-messages.mjs --output {{OUTPUT}} {{ARGS}}

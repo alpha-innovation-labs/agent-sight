@@ -3,4 +3,4 @@
 # Example: just view --help
 
 view *ARGS:
-	node ../../.opencode/view-user-messages.mjs {{ARGS}}
+	node {{invocation_directory()}}/.opencode/view-user-messages.mjs {{ARGS}}

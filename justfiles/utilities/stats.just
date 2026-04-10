@@ -3,4 +3,4 @@
 # Example: just stats --help
 
 stats *ARGS:
-	node ../../.opencode/message-stats.mjs {{ARGS}}
+	node {{invocation_directory()}}/.opencode/message-stats.mjs {{ARGS}}

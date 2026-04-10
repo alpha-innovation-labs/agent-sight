@@ -1,0 +1,31 @@
+---
+title: Overview
+description: What Agent Sight is and what problem it solves.
+---
+
+Agent Sight is a terminal-first tool for querying local coding-agent history.
+
+It helps you:
+
+- read OpenCode and Claude history from their existing local storage,
+- filter by time window and project directory,
+- inspect a single OpenCode session,
+- emit either compact message lists or full grouped conversation objects.
+
+The CLI is intentionally small. Instead of being a full TUI or database browser, it focuses on producing useful JSON for downstream tooling.
+
+## Supported Sources
+
+### OpenCode
+
+OpenCode history is read from a local SQLite database. By default Agent Sight resolves the database path from:
+
+1. `PROMSIGHT_OPENCODE_DB`
+2. `XDG_DATA_HOME/opencode/opencode.db`
+3. `~/.local/share/opencode/opencode.db`
+
+### Claude
+
+Claude history is read from `~/.claude/history.jsonl`.
+
+Claude rows are grouped into conversations by project and time gap so the output shape matches the higher-level conversation model used by the CLI.

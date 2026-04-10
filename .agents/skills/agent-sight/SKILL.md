@@ -1,21 +1,21 @@
 # Categorization
 
-This repo contains `promsight`, a local history/query CLI for user messages from two sources: OpenCode SQLite history and Claude Code local prompt history. The main entrypoint is `just cli ...`, which runs the Rust binary in `crate/target/debug/cli-rs`.
+This repo contains `agent-sight`, a local history/query CLI for user messages from two sources: OpenCode SQLite history and Claude Code local prompt history. The installed app is `agent-sight`, and the main development entrypoint is `just cli ...`, which runs the Rust binary in `cli/target/debug/cli-rs`.
 
 ## Agent Operating Rules
 
-- Prefer the Rust CLI under `crate/` over the older TypeScript prototype in `src/`.
+- Prefer the Rust CLI under `cli/` over older prototypes or ad hoc scripts.
 - Treat OpenCode and Claude as separate adapters.
-- Keep Claude-specific code under `crate/src/claude/`.
-- Keep OpenCode-specific code under `crate/src/opencode/`.
+- Keep Claude-specific code under `cli/src/claude/`.
+- Keep OpenCode-specific code under `cli/src/opencode/`.
 - Keep shared output shaping in common modules, not provider-specific files.
 - Do not reintroduce `opencode db path` subprocess calls; OpenCode DB path is resolved directly.
-- Preserve the current command contract exposed through `just cli`.
+- Preserve the current command contract exposed through `agent-sight` and `just cli`.
 
 ## Environment and Version Constraints
 
-- Rust crate manifest: `crate/Cargo.toml`
-- Binary invoked by Just: `crate/target/debug/cli-rs`
+- Rust crate manifest: `cli/Cargo.toml`
+- Binary invoked by Just: `cli/target/debug/cli-rs`
 - OpenCode DB default path logic matches OpenCode source:
   - `PROMSIGHT_OPENCODE_DB` if set
   - else `XDG_DATA_HOME/opencode/opencode.db`
@@ -27,21 +27,21 @@ This repo contains `promsight`, a local history/query CLI for user messages from
 
 ### Add or change a CLI command
 
-1. Update parsing in `crate/src/args.rs`.
-2. Wire command dispatch in `crate/src/main.rs`.
-3. Reuse provider adapters instead of duplicating query logic.
+1. Update parsing in `cli/src/args.rs`.
+2. Wire command dispatch in `cli/src/main.rs`.
+3. Reuse source adapters instead of duplicating query logic.
 4. Run `cargo fmt`, `cargo build`, and a `just cli ...` smoke test.
 
 ### Change OpenCode query behavior
 
-1. Edit `crate/src/opencode/db.rs`.
+1. Edit `cli/src/opencode/db.rs`.
 2. Keep the time-first query shape.
 3. Filter JSON fields in Rust instead of `json_extract(...)` in SQL when possible.
 4. Verify verbose timing with `just cli query --since 24h --source opencode --verbose`.
 
 ### Change Claude history behavior
 
-1. Edit `crate/src/claude/history.rs`.
+1. Edit `cli/src/claude/history.rs`.
 2. Stream `history.jsonl` line-by-line.
 3. Treat grouping as heuristic, not canonical sessions.
 4. Verify with `just cli query --since 24h --source claude`.
@@ -51,7 +51,7 @@ This repo contains `promsight`, a local history/query CLI for user messages from
 - Build the Rust CLI:
 
 ```bash
-cargo build --manifest-path crate/Cargo.toml
+cargo build --manifest-path cli/Cargo.toml
 ```
 
 - Run the default CLI:
@@ -68,24 +68,22 @@ just cli query --since 24h --source claude
 
 ## Workspace Overview
 
-- `crate/`
+- `cli/`
   Rust implementation of the CLI.
-- `crate/src/args.rs`
+- `cli/src/args.rs`
   Command-line parsing and command/source definitions.
-- `crate/src/main.rs`
+- `cli/src/main.rs`
   Top-level command dispatch and output selection.
-- `crate/src/opencode/`
+- `cli/src/opencode/`
   OpenCode SQLite adapter.
-- `crate/src/claude/`
+- `cli/src/claude/`
   Claude local history adapter.
-- `crate/src/output.rs`
+- `cli/src/output.rs`
   Shared grouping and compact/full output shaping.
-- `src/promsight.ts`
-  Older TypeScript prototype; useful as historical reference only.
 - `justfile`
   Developer entrypoints.
 
-## Providers
+## Sources
 
 ### OpenCode
 
@@ -113,13 +111,13 @@ Use when
 Query user messages from a recent time window.
 
 Enable/Install
-Build the Rust binary with `cargo build --manifest-path crate/Cargo.toml`.
+Build the Rust binary with `cargo build --manifest-path cli/Cargo.toml`.
 
 Import/Invoke
 `just cli query --since 24h`
 
 Minimal flow
-1. Choose a provider with `--source` if needed.
+1. Choose a source with `--source` if needed.
 2. Pass a `--since` window.
 3. Optionally restrict with `--directory`.
 4. Add `--full` for expanded conversation objects.
@@ -136,7 +134,7 @@ Pitfalls
 - Claude results are inferred conversations, not true thread IDs.
 
 Source
-`crate/src/main.rs`, `crate/src/opencode/db.rs`, `crate/src/claude/history.rs`
+`cli/src/main.rs`, `cli/src/opencode/db.rs`, `cli/src/claude/history.rs`
 
 ### Query One OpenCode Session
 
@@ -144,14 +142,14 @@ Use when
 Inspect user messages for one specific OpenCode session.
 
 Enable/Install
-Build the Rust binary with `cargo build --manifest-path crate/Cargo.toml`.
+Build the Rust binary with `cargo build --manifest-path cli/Cargo.toml`.
 
 Import/Invoke
 `just cli session --id <session-id>`
 
 Minimal flow
 1. Pass a session ID.
-2. Keep provider as OpenCode.
+2. Keep source as OpenCode.
 3. Add `--full` if you need metadata.
 
 Key APIs
@@ -163,7 +161,7 @@ Pitfalls
 - This command does not support Claude because Claude local history has no canonical session ID.
 
 Source
-`crate/src/main.rs`, `crate/src/opencode/db.rs`
+`cli/src/main.rs`, `cli/src/opencode/db.rs`
 
 ### Filter Message Text
 
@@ -171,7 +169,7 @@ Use when
 Find user messages containing a specific text fragment.
 
 Enable/Install
-Build the Rust binary with `cargo build --manifest-path crate/Cargo.toml`.
+Build the Rust binary with `cargo build --manifest-path cli/Cargo.toml`.
 
 Import/Invoke
 `just cli filter "rust" --since 24h`
@@ -193,15 +191,15 @@ Pitfalls
 - Matching is case-insensitive substring matching, not regex.
 
 Source
-`crate/src/args.rs`, `crate/src/main.rs`, `crate/src/output.rs`, `crate/src/claude/history.rs`
+`cli/src/args.rs`, `cli/src/main.rs`, `cli/src/output.rs`, `cli/src/claude/history.rs`
 
 ## API Reference
 
-- `just cli query --since <duration> [--source <provider>] [--directory <path>] [--full] [--verbose]`
+- `just cli query --since <duration> [--source <source>] [--directory <path>] [--full] [--verbose]`
 - `just cli session --id <session-id> [--source opencode] [--full] [--verbose]`
-- `just cli filter <text> --since <duration> [--source <provider>] [--directory <path>] [--full] [--verbose]`
+- `just cli filter <text> --since <duration> [--source <source>] [--directory <path>] [--full] [--verbose]`
 
-Supported providers:
+Supported sources:
 
 - `opencode` (default)
 - `claude`
@@ -210,13 +208,19 @@ Supported providers:
 
 - Do not assume Claude has real session IDs; grouping is heuristic.
 - Do not move Claude parsing logic into shared OpenCode modules.
-- Do not switch `just cli` back to the TypeScript implementation unless requested.
+- Do not switch `just cli` away from the Rust implementation unless requested.
 - Do not depend on `opencode` subprocesses for DB path discovery.
 - Avoid `json_extract(...)` on hot SQLite scans unless there is a strong reason.
 
 ## Optional
 
-- Legacy prototype: `src/promsight.ts`
+- Installed CLI examples:
+
+```bash
+agent-sight --version
+agent-sight query --since 24h --source claude
+```
+
 - Useful verification command:
 
 ```bash

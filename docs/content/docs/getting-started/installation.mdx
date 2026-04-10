@@ -1,0 +1,37 @@
+---
+title: Installation
+description: How to install Agent Sight.
+---
+
+Agent Sight is published for npm global installation.
+
+## Prerequisites
+
+- Node.js and npm installed
+- local OpenCode and/or Claude history available on the machine
+
+## Install Globally
+
+```bash
+npm install -g agent-sight
+```
+
+## Verify Installation
+
+```bash
+agent-sight --help
+```
+
+## Example Query
+
+```bash
+agent-sight query --since 24h
+```
+
+## Optional Environment Override
+
+If your OpenCode database is stored in a non-default location, set:
+
+```bash
+export PROMSIGHT_OPENCODE_DB="/absolute/path/to/opencode.db"
+```
